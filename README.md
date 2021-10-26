@@ -52,6 +52,9 @@ via the Find My app on the AirTag once.
 
 ### Hook the firmware update process for downgrades
 
+A detailed description of the downgrade process including script
+explanations is available on [YouTube](https://www.youtube.com/watch?v=C4JyI_WUNJ8).
+
 #### 1. Download the firmware version you want
 
 [The iPhone Wiki](https://www.theiphonewiki.com/wiki/OTA_Updates/AirTag) hosts an
