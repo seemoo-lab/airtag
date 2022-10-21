@@ -598,20 +598,37 @@ class Durian {
     */
     setSymbols(ios_version) {
 
-        var self = this;
         console.log(" * Automatically detecting symbols...");
+        var self = this;
 
         // at offset 28 in -[CLDurianTask opcodeDescription] there's a branch instruction to the function we need
         var {CLDurianTask} = ObjC.classes;
         var opcodeDescription = new NativePointer(CLDurianTask['- opcodeDescription'].implementation);
-        self._DurianOpcodeDescription = new NativePointer(Instruction.parse(opcodeDescription.add(28)).operands.pop().value);
+
+         // check if we have PAC assembly for hacks below, starts with PACIBSP
+        var is_pac = false;
+        if ("pacibsp".localeCompare(Instruction.parse(opcodeDescription).mnemonic) == 0) {
+            is_pac = true;
+            console.log("  > Determining symbols with PAC enabled.");
+        }
+
+        if (! is_pac) {
+            self._DurianOpcodeDescription = new NativePointer(Instruction.parse(opcodeDescription.add(28)).operands.pop().value);
+        } else {
+            self._DurianOpcodeDescription = new NativePointer(Instruction.parse(opcodeDescription.add(12*4)).operands.pop().value);
+        }
         console.log("  > _DurianOpcodeDesription " + self._DurianOpcodeDescription);
 
 
         // at offset 24 in -[CLHawkeyeTask opcodeDescription] there's a branch instruction to the function we need
         var {CLHawkeyeTask} = ObjC.classes;
         var opcodeDescription = new NativePointer(CLHawkeyeTask['- opcodeDescription'].implementation);
-        self._HawkeyeOpcodeDescription = new NativePointer(Instruction.parse(opcodeDescription.add(24)).operands.pop().value);
+        if (! is_pac) {
+            self._HawkeyeOpcodeDescription = new NativePointer(Instruction.parse(opcodeDescription.add(24)).operands.pop().value);
+        } else {
+            self._HawkeyeOpcodeDescription = new NativePointer(Instruction.parse(opcodeDescription.add(11*4)).operands.pop().value);
+        }
+
         console.log("  > _HawkeyeOpcodeDescription " + self._HawkeyeOpcodeDescription);
 
     }
