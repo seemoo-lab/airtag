@@ -225,14 +225,14 @@ class Durian {
             return "Playing Sound"
         }
 
-        var getOpcodeString = new NativeFunction(self._DurianOpcodeDescription, 'pointer', ['int64']);
+        var getOpcodeString = new NativeFunction(self._DurianOpcodeDescription.sign(), 'pointer', ['int64']);
         var desc = new ObjC.Object(getOpcodeString(opcode));
         return desc.toString();
     }
 
     getHawkeyeOpcodeDescription(opcode) {
         var self = this;
-        var getOpcodeString = new NativeFunction(self._HawkeyeOpcodeDescription, 'pointer', ['int64']);
+        var getOpcodeString = new NativeFunction(self._HawkeyeOpcodeDescription.sign(), 'pointer', ['int64']);
         var desc = new ObjC.Object(getOpcodeString(opcode));
         return desc.toString();
     }
