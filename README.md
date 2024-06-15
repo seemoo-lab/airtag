@@ -57,7 +57,7 @@ explanations is available on [YouTube](https://www.youtube.com/watch?v=C4JyI_WUN
 
 #### 1. Download the firmware version you want
 
-[The iPhone Wiki](https://www.theiphonewiki.com/wiki/OTA_Updates/AirTag) hosts an
+[The Apple Wiki](https://www.theapplewiki.com/wiki/OTA_Updates/AirTag) hosts an
 up-to-date list of all firmware updates released for the AirTag. Note that the very first
 stock version (1.0.225) was never released as OTA, so you cannot use the method here to
 downgrade to the very first version that did not have any anti-stalking protections.
