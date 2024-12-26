@@ -125,9 +125,9 @@ class Durian {
     constructor() {
 
         /*** INITIALIZE SCRIPT ***/
-        this.ios_version = "arm64_14.7";  // TODO adjust version here!
+        this.ios_version = "arm64_18.2";  // if iOS version is >= 18.2 different offsets will be used
 
-        this.log_verbose = false;  // switch logging verbosity
+        this.log_verbose = true;  // switch logging verbosity
 
         // global vars for the current device
         this.durian_service;
@@ -465,21 +465,33 @@ class Durian {
     playSound() {
         var self = this;
 
+        var startSoundTask = "";
+        if (parseFloat(this.ios_version.split("_")[1]) >= 18.2) {
+            startSoundTask = "startSoundSequenceTaskWithEncodedSequence:";
+        } else {
+            startSoundTask = "startSoundSequenceTaskWithSequence:";
+        }
         // create sound sequence
         // parameter format as follows: valid sound sequences are 4-byte dwords, 0x104 and 0x205 for the default sound sequence
         //var params = self.allocNSData([0x04, 0x01, 0x00, 0x00, 0x05, 0x02, 0x00, 0x00]);  // original
         var params = self.allocNSData([0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);  // 2x short round of beeps
 
         // last task parameter is payload appended to the opcode
-        var task = self.createTaskByNameWithArg('startSoundSequenceTaskWithSequence:', params);
+        var task = self.createTaskByNameWithArg(startSoundTask, params);
         self.runTask(task);
 
     }
 
     playSoundSequence(sequence) {
         var self = this;
+        var startSoundTask = "";
+        if (parseFloat(this.ios_version.split("_")[1]) >= 18.2) {
+            startSoundTask = "startSoundSequenceTaskWithEncodedSequence:";
+        } else {
+            startSoundTask = "startSoundSequenceTaskWithSequence:";
+        }
         var params = self.allocNSData(sequence);
-        var task = self.createTaskByNameWithArg('startSoundSequenceTaskWithSequence:', params);
+        var task = self.createTaskByNameWithArg(startSoundTask, params);
         self.runTask(task);
 
     }
@@ -601,36 +613,45 @@ class Durian {
         console.log(" * Automatically detecting symbols...");
         var self = this;
 
-        // at offset 28 in -[CLDurianTask opcodeDescription] there's a branch instruction to the function we need
         var {CLDurianTask} = ObjC.classes;
         var opcodeDescription = new NativePointer(CLDurianTask['- opcodeDescription'].implementation);
 
-         // check if we have PAC assembly for hacks below, starts with PACIBSP
+        // check if we have PAC assembly for hacks below, starts with PACIBSP
         var is_pac = false;
         if ("pacibsp".localeCompare(Instruction.parse(opcodeDescription).mnemonic) == 0) {
             is_pac = true;
             console.log("  > Determining symbols with PAC enabled.");
         }
 
+        /*
+        At these offsets in -[CLDurianTask opcodeDescription] and  -[CLHawkeyeTask opcodeDescription]
+        there's a branch instruction to the function we need
+        */
+        var durianOffset = 0;
+        var hawkeyeOffset = 0;
         if (! is_pac) {
-            self._DurianOpcodeDescription = new NativePointer(Instruction.parse(opcodeDescription.add(28)).operands.pop().value);
+            // the offsets for newer iOS versions are slightly different
+            if (parseFloat(ios_version.split("_")[1]) >= 18.2) {
+                durianOffset = 20;
+                hawkeyeOffset = 16;
+            } else {
+                durianOffset = 28;
+                hawkeyeOffset = 24;
+            }
         } else {
-            self._DurianOpcodeDescription = new NativePointer(Instruction.parse(opcodeDescription.add(12*4)).operands.pop().value);
+            // offsets for PAC assembly
+            durianOffset = 48;
+            hawkeyeOffset = 44;
         }
+
+        self._DurianOpcodeDescription = new NativePointer(Instruction.parse(opcodeDescription.add(durianOffset)).operands.pop().value);
         console.log("  > _DurianOpcodeDesription " + self._DurianOpcodeDescription);
 
 
-        // at offset 24 in -[CLHawkeyeTask opcodeDescription] there's a branch instruction to the function we need
         var {CLHawkeyeTask} = ObjC.classes;
         var opcodeDescription = new NativePointer(CLHawkeyeTask['- opcodeDescription'].implementation);
-        if (! is_pac) {
-            self._HawkeyeOpcodeDescription = new NativePointer(Instruction.parse(opcodeDescription.add(24)).operands.pop().value);
-        } else {
-            self._HawkeyeOpcodeDescription = new NativePointer(Instruction.parse(opcodeDescription.add(11*4)).operands.pop().value);
-        }
-
+        self._HawkeyeOpcodeDescription = new NativePointer(Instruction.parse(opcodeDescription.add(hawkeyeOffset)).operands.pop().value);
         console.log("  > _HawkeyeOpcodeDescription " + self._HawkeyeOpcodeDescription);
-
     }
 
 

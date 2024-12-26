@@ -16,7 +16,7 @@ class Durian {
     constructor() {
 
         /*** INITIALIZE SCRIPT ***/
-        this.ios_version = "arm64_14.7";  // TODO adjust iOS version here!
+        this.ios_version = "arm64_18.2";  // if iOS version is >= 18.2 different offsets will be used
 
         // intercepted from a packet log, starts with L2CAP 91 15 07
         this.durian_version_bytes = [0x13, 0x10, 0x0e, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x0f, 0x00]; //1.0.225
@@ -569,33 +569,42 @@ class Durian {
         var {CLDurianTask} = ObjC.classes;
         var opcodeDescription = new NativePointer(CLDurianTask['- opcodeDescription'].implementation);
 
-         // check if we have PAC assembly for hacks below, starts with PACIBSP
+        // check if we have PAC assembly for hacks below, starts with PACIBSP
         var is_pac = false;
         if ("pacibsp".localeCompare(Instruction.parse(opcodeDescription).mnemonic) == 0) {
             is_pac = true;
             console.log("  > Determining symbols with PAC enabled.");
         }
 
+        /*
+        At these offsets in -[CLDurianTask opcodeDescription] and  -[CLHawkeyeTask opcodeDescription]
+        there's a branch instruction to the function we need
+        */
+        var durianOffset = 0;
+        var hawkeyeOffset = 0;
         if (! is_pac) {
-            self._DurianOpcodeDescription = new NativePointer(Instruction.parse(opcodeDescription.add(28)).operands.pop().value);
+            // the offsets for newer iOS versions are slightly different
+            if (parseFloat(ios_version.split("_")[1]) >= 18.2) {
+                durianOffset = 20;
+                hawkeyeOffset = 16;
+            } else {
+                durianOffset = 28;
+                hawkeyeOffset = 24;
+            }
         } else {
-            self._DurianOpcodeDescription = new NativePointer(Instruction.parse(opcodeDescription.add(12*4)).operands.pop().value);
+            // offsets for PAC assembly
+            durianOffset = 48;
+            hawkeyeOffset = 44;
         }
+
+        self._DurianOpcodeDescription = new NativePointer(Instruction.parse(opcodeDescription.add(durianOffset)).operands.pop().value);
         console.log("  > _DurianOpcodeDesription " + self._DurianOpcodeDescription);
 
 
-        // at offset 24 in -[CLHawkeyeTask opcodeDescription] there's a branch instruction to the function we need
         var {CLHawkeyeTask} = ObjC.classes;
         var opcodeDescription = new NativePointer(CLHawkeyeTask['- opcodeDescription'].implementation);
-        if (! is_pac) {
-            self._HawkeyeOpcodeDescription = new NativePointer(Instruction.parse(opcodeDescription.add(24)).operands.pop().value);
-        } else {
-            self._HawkeyeOpcodeDescription = new NativePointer(Instruction.parse(opcodeDescription.add(11*4)).operands.pop().value);
-        }
-
+        self._HawkeyeOpcodeDescription = new NativePointer(Instruction.parse(opcodeDescription.add(hawkeyeOffset)).operands.pop().value);
         console.log("  > _HawkeyeOpcodeDescription " + self._HawkeyeOpcodeDescription);
-
-
     }
 
     setFirmwareAsset(index, blob) {
